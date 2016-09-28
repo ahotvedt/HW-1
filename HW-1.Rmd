@@ -34,10 +34,10 @@ states <- read_csv("data/states.csv")
 
 Please indicate
 
-* Who you collaborated with: Katherine Hobbs, Kyra Gray, Nina Sonneborn
-* Roughly how much time you spent on this HW so far:
-* The URL of the RPubs published URL [here](https://www.nhl.com/).
-* What gave you the most trouble:
+* Who you collaborated with: Katherine Hobbs (mostly), Kyra Gray & Nina Sonneborn (briefly in class)
+* Roughly how much time you spent on this HW so far: Probably about 4-5 hours
+* The URL of the RPubs published URL [here](http://rpubs.com/ahotvedt/213269).
+* What gave you the most trouble: Question #3! I have only gotten part of the way through it for this pre-submit
 * Any comments you have:
 
 
@@ -73,10 +73,10 @@ p <- ggplot(data=flights, aes(x=date, y=propover30)) +
 
 p + geom_smooth()
 
-# From the graph produced by the above code, we can see that the winter months are the worst for this airport in terms of proportion of flights delayed for more than 30 minutes. We see the proportion of delayed flights dip starting in July, and then peak up again in late December. This is likely due to an increase in troublesome weather such as intense rains or snow in winter months.
 
 ```
 
+From the graph produced by the above code, we can see that the winter months are the worst for this airport in terms of proportion of flights delayed for more than 30 minutes. We see the proportion of delayed flights dip starting in July, and then peak up again in late December. This is likely due to an increase in troublesome weather such as intense rains or snow in winter months.
 
 
 ## Question 2:
@@ -97,11 +97,9 @@ combined %>%
   summarise(avg_age = mean(age)) %>% 
   arrange(desc(avg_age))
 
- # People who prefer older planes should choose the carrier MQ (Envoy Air), AA (American Airlines), or DL (Delta), because these airlines have the oldest planes on average.
-
 ```
 
-
+People who prefer older planes should choose the carrier MQ (Envoy Air), AA (American Airlines), or DL (Delta), because these airlines have the oldest planes on average.
 
 
 
@@ -119,11 +117,11 @@ airports_less <- select(airports,iata,state)
 
 flights_less <- left_join(flights, airports_less, by=c("dest"="iata"))
 
-southwest_flights <- flight_paths %>% 
+southwest_flights <- flights_less %>% 
   filter(carrier == "WN")
   
 southwest_flights %>% 
-  group_by(state) %>% 
+  group_by(state)
   
 
 ```
@@ -148,6 +146,8 @@ StatesAirportsFlights <- left_join(flights,StatesAirports,by = c("dest" = "iata"
 
 final <- select(StatesAirportsFlights,date,carrier,region,dest)
 
+library(lubridate)
+
 final <- final %>% 
   mutate(month = month(date)) %>% 
   filter(month == 7)
@@ -157,8 +157,7 @@ final <- final %>%
   count(region)
 
 ggplot(data=final, aes(x=carrier, y=n, fill=region)) +
-  geom_bar(stat="identity", position="fill") + 
-  coord_flip()
+  geom_bar(stat="identity", position="fill")
 
 
 ```
