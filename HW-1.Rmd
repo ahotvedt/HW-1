@@ -1,6 +1,6 @@
 ---
 title: "MATH 216 Homework 1"
-author: "WRITE YOUR NAME HERE"
+author: "Amanda Hotvedt"
 output:
   html_document:
     toc: true
@@ -9,7 +9,7 @@ output:
     smooth_scroll: false
 ---
 
-```{r, echo=FALSE, message=FALSE, cache=TRUE}
+```{r, echo=FALSE, message=FALSE}
 library(ggplot2)
 library(dplyr)
 # For read_csv() command, which is an improved version of base R's read.csv()
@@ -34,7 +34,7 @@ states <- read_csv("data/states.csv")
 
 Please indicate
 
-* Who you collaborated with:
+* Who you collaborated with: Katherine Hobbs, Kyra Gray, Nina Sonneborn
 * Roughly how much time you spent on this HW so far:
 * The URL of the RPubs published URL [here](https://www.nhl.com/).
 * What gave you the most trouble:
@@ -57,9 +57,25 @@ minutes tend to occur.
 
 ```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=6}
 
+flights <- flights %>% 
+  mutate(over30 = ifelse(dep_delay>30, TRUE, FALSE))
+  
+flights %>%   
+  group_by(date) %>% 
+  summarise(propover30 = mean(over30, na.rm=TRUE))
+
+flights <- flights %>% 
+  group_by(date) %>% 
+  mutate(propover30 = mean(over30, na.rm=TRUE))
+
+p <- ggplot(data=flights, aes(x=date, y=propover30)) +
+  geom_line()
+
+p + geom_smooth()
+
+# From the graph produced by the above code, we can see that the winter months are the worst for this airport in terms of proportion of flights delayed for more than 30 minutes. We see the proportion of delayed flights dip starting in July, and then peak up again in late December. This is likely due to an increase in troublesome weather such as intense rains or snow in winter months.
+
 ```
-
-
 
 
 
@@ -69,6 +85,19 @@ Some people prefer flying on older planes.  Even though they aren't as nice,
 they tend to have more room.  Which airlines should these people favor?
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
+ 
+combined <- full_join(planes,flights,by = "plane")
+
+combined <- combined %>% 
+  mutate(age = 2016 - as.numeric(year))
+
+combined %>% 
+  group_by(carrier) %>% 
+  filter(!is.na(age)) %>% 
+  summarise(avg_age = mean(age)) %>% 
+  arrange(desc(avg_age))
+
+ # People who prefer older planes should choose the carrier MQ (Envoy Air), AA (American Airlines), or DL (Delta), because these airlines have the oldest planes on average.
 
 ```
 
@@ -86,6 +115,17 @@ path, but since it flew 299 times in 2013, it would be counted as 299 flights.
 
 ```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=6}
 
+airports_less <- select(airports,iata,state)
+
+flights_less <- left_join(flights, airports_less, by=c("dest"="iata"))
+
+southwest_flights <- flight_paths %>% 
+  filter(carrier == "WN")
+  
+southwest_flights %>% 
+  group_by(state) %>% 
+  
+
 ```
 
 
@@ -99,5 +139,26 @@ carrier flies to/from Houston in the month of July.  Consider the `month()`
 function from the `lubridate` package.
 
 ```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=6}
+
+StatesAirports <- full_join(states,airports,by = "state")
+
+StatesAirports <- select(StatesAirports,region,iata)
+
+StatesAirportsFlights <- left_join(flights,StatesAirports,by = c("dest" = "iata"))
+
+final <- select(StatesAirportsFlights,date,carrier,region,dest)
+
+final <- final %>% 
+  mutate(month = month(date)) %>% 
+  filter(month == 7)
+
+final <- final %>% 
+  group_by(carrier) %>% 
+  count(region)
+
+ggplot(data=final, aes(x=carrier, y=n, fill=region)) +
+  geom_bar(stat="identity", position="fill") + 
+  coord_flip()
+
 
 ```
