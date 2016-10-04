@@ -128,7 +128,7 @@ SW_flight_paths %>%
   tally() %>% 
   count(state) %>% 
   arrange(desc(nn)) %>% 
-  kable(caption="SW Flight Paths")
+  kable(col.names = c("State", "Number of SW Flight Paths"), caption = "Southwest Flight Paths by State")
 
 #flights
 SW_flights <- airports %>% 
@@ -140,7 +140,7 @@ SW_flights %>%
   group_by(state) %>% 
   tally() %>% 
   arrange(desc(n)) %>% 
-  kable(caption="SW Flights")
+  kable(col.names = c("state", "Number of SW Flights"), caption = "Southwest Flights by State")
 
 ```
 
