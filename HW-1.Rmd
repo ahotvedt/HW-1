@@ -13,7 +13,9 @@ output:
 library(ggplot2)
 library(dplyr)
 # For read_csv() command, which is an improved version of base R's read.csv()
-library(readr) 
+library(readr)
+library(lubridate)
+library(knitr)
 
 # Load data sets. Note this assumes this .Rmd files is in the same directory as
 # the .csv files.
@@ -35,9 +37,9 @@ states <- read_csv("data/states.csv")
 Please indicate
 
 * Who you collaborated with: Katherine Hobbs (mostly), Kyra Gray & Nina Sonneborn (briefly in class)
-* Roughly how much time you spent on this HW so far: Probably about 4-5 hours
+* Roughly how much time you spent on this HW so far: Probably about 10 hours
 * The URL of the RPubs published URL [here](http://rpubs.com/ahotvedt/213269).
-* What gave you the most trouble: Question #3! I have only gotten part of the way through it for this pre-submit
+* What gave you the most trouble: the group_by function gave me a lot of trouble, and I kept getting error codes, but I think it's just a matter of figuring out when it will work with other functions and when I am piping.
 * Any comments you have:
 
 
@@ -58,25 +60,26 @@ minutes tend to occur.
 ```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=6}
 
 flights <- flights %>% 
-  mutate(over30 = ifelse(dep_delay>30, TRUE, FALSE))
-  
-flights %>%   
-  group_by(date) %>% 
-  summarise(propover30 = mean(over30, na.rm=TRUE))
+  mutate(over30 = ifelse(dep_delay>30, TRUE, FALSE)) %>% 
+  filter(!is.na(over30))
 
 flights <- flights %>% 
   group_by(date) %>% 
-  mutate(propover30 = mean(over30, na.rm=TRUE))
+  mutate(propover30 = mean(over30))
 
 p <- ggplot(data=flights, aes(x=date, y=propover30)) +
   geom_line()
 
-p + geom_smooth()
-
+p + 
+  geom_smooth() +
+  xlab("Date") +
+  ylab("Proportion of Flights Delayed by More Than 30 Minutes")
 
 ```
 
 From the graph produced by the above code, we can see that the winter months are the worst for this airport in terms of proportion of flights delayed for more than 30 minutes. We see the proportion of delayed flights dip starting in July, and then peak up again in late December. This is likely due to an increase in troublesome weather such as intense rains or snow in winter months.
+
+It is important to recognize that when I created a variable for "over30", I eliminated approximately 2900 N/A data points. These were lines in the data set that had a date associated with them, but not any information regarding flight time delays. However, there are over 220,000 entries total in the data set, so it is possible that removing the N/As might not make a huge impact.
 
 
 ## Question 2:
@@ -86,20 +89,20 @@ they tend to have more room.  Which airlines should these people favor?
 
 ```{r, echo=FALSE, fig.width=12, fig.height=6}
  
-combined <- full_join(planes,flights,by = "plane")
-
-combined <- combined %>% 
-  mutate(age = 2016 - as.numeric(year))
+combined <- full_join(planes,flights,by = "plane") %>% 
+  mutate(age = 2016 - as.numeric(year)) %>% 
+  select(carrier,age,year,plane)
 
 combined %>% 
   group_by(carrier) %>% 
-  filter(!is.na(age)) %>% 
-  summarise(avg_age = mean(age)) %>% 
-  arrange(desc(avg_age))
+  filter(!is.na(age)) %>%
+  summarise(avg_age = mean(age), std_dev = sd(age), "num_of_planes" = n()) %>% 
+  arrange(desc(avg_age)) %>% 
+  kable(digits=1)
 
 ```
 
-People who prefer older planes should choose the carrier MQ (Envoy Air), AA (American Airlines), or DL (Delta), because these airlines have the oldest planes on average.
+People who prefer older planes should choose the carrier MQ (Envoy Air), AA (American Airlines), or DL (Delta), because these airlines have the oldest planes on average. Interestingly enough, Envoy Air is a wholly owned subsidiary of American Airlines! So those interested in flying on older planes are likely to end up on an AA-owned plane.
 
 
 
@@ -113,21 +116,37 @@ path, but since it flew 299 times in 2013, it would be counted as 299 flights.
 
 ```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=6}
 
-airports_less <- select(airports,iata,state)
-
-flights_less <- left_join(flights, airports_less, by=c("dest"="iata"))
-
-southwest_flights <- flights_less %>% 
+#flight paths
+SW_flight_paths <- airports %>% 
+  select(iata,state) %>% 
+  left_join(flights,., by=c("dest"="iata")) %>% 
   filter(carrier == "WN")
-  
-southwest_flights %>% 
-  group_by(state)
-  
+
+SW_flight_paths %>% 
+  group_by(state,flight) %>% 
+  filter(carrier == "WN") %>% 
+  tally() %>% 
+  count(state) %>% 
+  arrange(desc(nn)) %>% 
+  kable(caption="SW Flight Paths")
+
+#flights
+SW_flights <- airports %>% 
+  select(iata,state) %>% 
+  left_join(flights,., by=c("dest"="iata")) %>% 
+  filter(carrier == "WN")
+
+SW_flights %>% 
+  group_by(state) %>% 
+  tally() %>% 
+  arrange(desc(n)) %>% 
+  kable(caption="SW Flights")
 
 ```
 
+Southwest Airlines' flight PATHS tended to fly mostly to other places in Texas. Following that, the most popular flight paths were to Florida, Louisiana, and California.
 
-
+Southewest Airlines' FLIGHTS tended to fly to airports in the state of Texas as well. Simiarly to its flight paths, the most popular flights were also to Florida, Louisiana, and California.
 
 
 ## Question 4:
@@ -138,26 +157,24 @@ function from the `lubridate` package.
 
 ```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=6}
 
-StatesAirports <- full_join(states,airports,by = "state")
+StatesAirports <- full_join(states,airports,by = "state") %>%
+  select(region,iata)
 
-StatesAirports <- select(StatesAirports,region,iata)
+StatesAirportsFlights <- StatesAirports %>%
+    left_join(flights, ., by = c("dest" = "iata"))
 
-StatesAirportsFlights <- left_join(flights,StatesAirports,by = c("dest" = "iata"))
-
-final <- select(StatesAirportsFlights,date,carrier,region,dest)
-
-library(lubridate)
-
-final <- final %>% 
+final <- select(StatesAirportsFlights,date,carrier,region,dest) %>% 
   mutate(month = month(date)) %>% 
-  filter(month == 7)
-
-final <- final %>% 
+  filter(month == 7) %>% 
   group_by(carrier) %>% 
-  count(region)
+  count(region) %>% 
+  filter(!is.na(region))
 
 ggplot(data=final, aes(x=carrier, y=n, fill=region)) +
-  geom_bar(stat="identity", position="fill")
-
+  geom_bar(stat="identity", position="fill") +
+  ggtitle("Proportion of Flights to Each Region to/from Houston in July") +
+  ylab("Proportion of Flights") +
+  xlab("Carrier")
 
 ```
+This graph presents a good visual representation of data, and informs us that many of the carriers that go to and from Houston have a main region of the US that they tend to fly to in the month of July. For example, American Airlines appears to fly exclusively to and from the South. Additionally, JetBlue (carrier B6) is one of the few carriers that makes a lot of flights to the Northeast, which could be an inconvenience to those from Houston who need to make regular trips to that region.
